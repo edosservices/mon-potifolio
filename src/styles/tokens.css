@@ -1,0 +1,259 @@
+@font-face {
+  font-family: "Newsreader";
+  src: url("../fonts/newsreader.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("../fonts/newsreader-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("../fonts/manrope.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #f3f1eb;
+  --surface: #fbfaf7;
+  --ink: #14171c;
+  --ink-soft: #2c3340;
+  --muted: #5c6570;
+  --line: rgba(20, 23, 28, 0.12);
+  --line-strong: rgba(20, 23, 28, 0.28);
+  --accent: #0e6e68;
+  --accent-deep: #0a524e;
+  --accent-soft: #e5f3f1;
+  --dark: #12161b;
+  --dark-2: #0c0f13;
+  --on-dark: #f3f1eb;
+  --on-dark-muted: #c5ced4;
+  --header-h: 76px;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Manrope", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --shadow: 0 24px 60px rgba(16, 20, 24, 0.08);
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 400;
+  color: var(--ink-soft);
+  background: var(--bg);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #d5ebe8;
+  color: var(--ink);
+}
+
+[id] {
+  scroll-margin-top: 92px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  z-index: 80;
+  transform: translateY(-160%);
+  background: var(--ink);
+  color: var(--on-dark);
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 999px;
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.container {
+  width: min(1160px, 100%);
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.btn--primary {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.btn--primary:hover {
+  background: #000;
+}
+
+.btn--secondary {
+  border-color: var(--line-strong);
+  background: transparent;
+}
+
+.btn--secondary:hover {
+  border-color: var(--ink);
+  background: rgba(20, 23, 28, 0.03);
+}
+
+.btn--ghost {
+  padding-inline: 8px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.section--dark .btn--primary,
+.cta .btn--primary {
+  background: var(--on-dark);
+  color: var(--ink);
+}
+
+.section--dark .btn--primary:hover,
+.cta .btn--primary:hover {
+  background: #fff;
+}
+
+.section--dark .btn--secondary,
+.cta .btn--secondary {
+  color: var(--on-dark);
+  border-color: rgba(243, 241, 235, 0.38);
+}
+
+.section--dark .btn--secondary:hover,
+.cta .btn--secondary:hover {
+  border-color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.section--dark :focus-visible,
+.cta :focus-visible,
+.site-footer :focus-visible {
+  outline-color: #9ee0da;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .btn {
+    transition: none;
+  }
+}
