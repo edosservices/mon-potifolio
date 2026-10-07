@@ -54,9 +54,11 @@
   --primary-bg: #12315c;
   --primary-ink: #f5f9ff;
   --primary-hover: #0c2344;
-  --band: #10233f;
-  --band-ink: #f4f7fb;
-  --band-muted: #c9d6e8;
+  --band: #e7eef8;
+  --band-ink: #101828;
+  --band-muted: #3e4e63;
+  --band-accent: #1d4e89;
+  --band-line: rgba(16, 24, 40, 0.12);
   --focus: #1d4e89;
   --selection: #d5e4f5;
   --header-h: 76px;
@@ -85,6 +87,8 @@
   --band: #16283d;
   --band-ink: #f4f7fb;
   --band-muted: #c5d4e6;
+  --band-accent: #9ec4ef;
+  --band-line: rgba(244, 247, 251, 0.16);
   --focus: #9ec4ef;
   --selection: #1d3a5c;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);

@@ -283,23 +283,23 @@ function renderCertifications(data) {
   const cards = data.certifications
     .map((item) => {
       const file = safeUrl(item.file);
-      const issuer = item.issuer || data.ui.issuerUnknown;
-      const date = item.date || data.ui.dateUnknown;
+      const issuer = item.issuer ? `<p>${escapeHtml(item.issuer)}</p>` : "";
+      const date = item.date ? `<p class="cert__date">${escapeHtml(item.date)}</p>` : "";
       const hours = item.hours ? `<p class="cert__hours">${escapeHtml(String(item.hours))} ${escapeHtml(data.ui.hoursUnit)}</p>` : "";
       const note = item.note ? `<p class="card__note">${escapeHtml(item.note)}</p>` : "";
+      const thumb = file
+        ? `<img class="cert__thumb" src="${escapeHtml(file)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" />`
+        : "";
       const action = file
         ? `<button class="btn btn--secondary" type="button" data-cert-open data-cert-src="${escapeHtml(file)}" data-cert-title="${escapeHtml(item.name)}">${escapeHtml(data.ui.viewDocument)}</button>`
-        : `<p class="cert__pending">${escapeHtml(data.ui.documentPending)}</p>`;
-      const plate = file
-        ? ""
-        : `<div class="cert__plate" aria-hidden="true"><span>${escapeHtml(item.domain)}</span></div>`;
+        : "";
       return `
         <article class="cert" data-reveal>
-          ${plate}
+          ${thumb}
           <p class="eyebrow">${escapeHtml(item.domain)}</p>
           <h3>${escapeHtml(item.name)}</h3>
-          <p>${escapeHtml(issuer)}</p>
-          <p class="cert__date">${escapeHtml(date)}</p>
+          ${issuer}
+          ${date}
           ${hours}
           ${note}
           ${action}
@@ -356,7 +356,6 @@ function renderSkills(data) {
       `;
     })
     .join("");
-  const extra = data.projectTechnologies.map((name) => `<li>${escapeHtml(name)}</li>`).join("");
   return `
     <section class="section section--tint" id="competences" aria-labelledby="skills-title">
       <div class="container">
@@ -366,11 +365,6 @@ function renderSkills(data) {
           <p class="lede">${escapeHtml(data.ui.skillsIntro)}</p>
         </div>
         <div class="skill-groups">${groups}</div>
-        <aside class="aside" data-reveal>
-          <h3>${escapeHtml(data.ui.projectTechTitle)}</h3>
-          <ul class="chips">${extra}</ul>
-          <p>${escapeHtml(data.ui.projectTechNote)}</p>
-        </aside>
       </div>
     </section>
   `;
@@ -499,7 +493,6 @@ function renderFooter(data) {
       </div>
       <div class="container footer__base">
         <p>© ${year} ${escapeHtml(data.profile.name)}</p>
-        <p>${escapeHtml(data.site.imageCredit)}</p>
       </div>
     </footer>
   `;

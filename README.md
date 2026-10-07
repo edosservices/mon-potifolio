@@ -19,23 +19,16 @@ Remplacez les fichiers de `public/images/` en gardant le même nom :
 
 - `profile.jpg` — portrait principal (hero et CV)
 - `profile-smile.jpg` et `profile-outdoor.jpg` — portraits de la section profil
-- `field-network.jpg`, `field-camera.jpg`, `field-site.jpg` — photos de terrain
-- `network-placeholder.jpg`
-- `telecom-placeholder.jpg`
-- `development-placeholder.jpg`
-- `technology-placeholder.jpg`
+- `field-network.jpg`, `field-camera.jpg` et `field-site.jpg` — photos de terrain
+- `certificates/` — attestations publiques
 
 ## Signature
 
-Déposez la signature manuscrite en PNG transparent :
-
-`public/images/signature.png`
-
-Puis passez `signature.available` à `true` dans `src/data/facts.js`. Aucune signature n’est inventée.
+Le CV public ne comporte pas de signature.
 
 ## Certificats
 
-Les cartes existent déjà. Pour afficher un document, déposez une version publique (recadrée s’il y a une donnée sensible) et renseignez `file`, par exemple `/images/certificates/reseaux.pdf`, sur l’entrée correspondante de `facts.certifications`. Tant que `file` est vide, le bouton « Voir le document » n’apparaît pas.
+Les fichiers publics sont dans `public/images/certificates/`. L’attestation de Hope Africa University est publiée sans la date de naissance, le lieu de naissance ni le matricule.
 
 Le passeport ne doit pas être publié.
 

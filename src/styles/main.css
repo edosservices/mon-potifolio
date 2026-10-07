@@ -490,11 +490,21 @@ h3 {
 }
 
 .card__note,
-.cert__pending,
 .cert__date,
 .cert__hours {
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.cert__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 12px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 12px;
+  background: var(--tint);
 }
 
 .chips {
@@ -701,8 +711,14 @@ h3 {
   color: var(--band-ink);
 }
 
-.band .eyebrow {
-  color: #9ec4ef;
+.band .eyebrow,
+.venture span {
+  color: var(--band-accent);
+}
+
+.band .lede,
+.band p {
+  color: var(--band-muted);
 }
 
 .venture {
@@ -716,12 +732,11 @@ h3 {
 .venture li {
   min-width: 0;
   padding-top: 12px;
-  border-top: 1px solid rgba(244, 247, 251, 0.16);
+  border-top: 1px solid var(--band-line);
 }
 
 .venture span {
   display: block;
-  color: #9ec4ef;
   font-family: var(--mono);
   font-size: 0.75rem;
 }

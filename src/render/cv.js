@@ -1,7 +1,7 @@
 import { buildCvModel } from "../cv/model.js";
 import { portfolioFor } from "../data/portfolio.js";
 import { icon } from "./icons.js";
-import { absoluteUrl, escapeHtml, jsonScript, mailto, resolveSiteUrl, safeUrl, tel } from "./html.js";
+import { absoluteUrl, escapeHtml, jsonScript, mailto, resolveSiteUrl, tel } from "./html.js";
 
 function langSwitch(data) {
   const links = ["fr", "en", "es"]
@@ -72,14 +72,13 @@ export function renderCv(data = portfolioFor("fr")) {
 
   const certifications = model.certifications
     .map((item) => {
-      const issuer = item.issuer || model.ui.issuerUnknown;
-      const date = item.date || model.ui.dateUnknown;
-      const hours = item.hours ? ` · ${item.hours} ${escapeHtml(model.ui.hoursUnit)}` : "";
+      const hours = item.hours ? `${item.hours} ${model.ui.hoursUnit}` : "";
+      const meta = [item.domain, item.issuer, item.date, hours].filter(Boolean).join(" · ");
       const note = item.note ? `<p>${escapeHtml(item.note)}</p>` : "";
       return `
         <article class="cv-item">
           <h3>${escapeHtml(item.name)}</h3>
-          <p class="cv-meta">${escapeHtml(item.domain)} · ${escapeHtml(issuer)} · ${escapeHtml(date)}${hours}</p>
+          <p class="cv-meta">${escapeHtml(meta)}</p>
           ${note}
         </article>
       `;
@@ -94,10 +93,6 @@ export function renderCv(data = portfolioFor("fr")) {
     .join("");
 
   const interests = model.interests.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const signatureImage =
-    model.signature.available && safeUrl(model.signature.src)
-      ? `<img src="${escapeHtml(safeUrl(model.signature.src))}" alt="${escapeHtml(model.signature.alt)}" />`
-      : `<p class="signature__pending">${escapeHtml(model.ui.signaturePending)}</p>`;
 
   const person = {
     "@context": "https://schema.org",
@@ -185,13 +180,6 @@ export function renderCv(data = portfolioFor("fr")) {
       <section aria-labelledby="cv-interets">
         <h2 id="cv-interets">${escapeHtml(model.headings.interests)}</h2>
         <ul>${interests}</ul>
-      </section>
-      <section aria-labelledby="cv-signature">
-        <h2 id="cv-signature">${escapeHtml(model.headings.signature)}</h2>
-        <figure class="signature">
-          <div class="signature__plate">${signatureImage}</div>
-          <figcaption>${escapeHtml(model.signature.name)}</figcaption>
-        </figure>
       </section>
     </main>
   `;

@@ -66,11 +66,10 @@ export const facts = {
     { id: "agri", school: "", location: "Idjwi", featured: false },
   ],
   certifications: [
-    { id: "hauAttestation", category: "academic", hours: null, file: "" },
-    { id: "networks90", category: "networks", hours: 90, file: "" },
-    { id: "security90", category: "security", hours: 90, file: "" },
-    { id: "maintenance90", category: "maintenance", hours: 90, file: "" },
-    { id: "stateDiploma", category: "academic", hours: null, file: "" },
+    { id: "hauAttestation", category: "academic", hours: null, file: "/images/certificates/attestation-hau.jpg" },
+    { id: "networks90", category: "networks", hours: 90, file: "/images/certificates/reseaux-informatiques.jpg" },
+    { id: "security90", category: "security", hours: 90, file: "/images/certificates/securite-reseaux.jpg" },
+    { id: "maintenance90", category: "maintenance", hours: 90, file: "/images/certificates/maintenance.jpg" },
   ],
   skillGroups: [
     { id: "networkSecurity", skills: ["networkAdmin", "itSecurity", "protocols", "troubleshooting"] },
@@ -105,7 +104,7 @@ export const facts = {
   expertise: [
     { id: "networks", index: "01", icon: "network", image: "fieldNetwork", frame: "tall" },
     { id: "support", index: "02", icon: "server", image: "fieldSite", frame: "tall" },
-    { id: "fullstack", index: "03", icon: "code", image: "development", frame: "wide" },
+    { id: "fullstack", index: "03", icon: "code", image: "", frame: "wide" },
     { id: "surveillance", index: "04", icon: "shield", image: "fieldCamera", frame: "tall" },
   ],
   field: ["fieldNetwork", "fieldCamera", "fieldSite"],

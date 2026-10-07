@@ -180,12 +180,11 @@ function blocksFor(model, photoSize) {
     }),
     paragraph(model.headings.certifications, "Heading2"),
     ...model.certifications.flatMap((item) => {
-      const issuer = item.issuer || model.ui.issuerUnknown;
-      const date = item.date || model.ui.dateUnknown;
-      const hours = item.hours ? ` · ${item.hours} ${model.ui.hoursUnit}` : "";
+      const hours = item.hours ? `${item.hours} ${model.ui.hoursUnit}` : "";
+      const meta = [item.domain, item.issuer, item.date, hours].filter(Boolean).join(" · ");
       return [
         paragraph(item.name),
-        paragraph(`${item.domain} · ${issuer} · ${date}${hours}`),
+        paragraph(meta),
         ...(item.note ? [paragraph(item.note)] : []),
       ];
     }),
@@ -193,9 +192,6 @@ function blocksFor(model, photoSize) {
     ...model.languages.map((item) => paragraph(`${item.name} — ${item.level}${item.note ? `. ${item.note}` : ""}`)),
     paragraph(model.headings.interests, "Heading2"),
     ...model.interests.map((item) => paragraph(`• ${item}`)),
-    paragraph(model.headings.signature, "Heading2"),
-    paragraph(model.signature.available ? model.signature.alt : model.ui.signaturePending),
-    paragraph(model.signature.name),
   ];
 }
 
