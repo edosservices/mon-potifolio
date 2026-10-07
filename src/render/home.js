@@ -1,65 +1,49 @@
-import { levelMeta } from "../cv/model.js";
-import { portfolio as fallback } from "../data/portfolio.js";
+import { portfolioFor } from "../data/portfolio.js";
 import { icon } from "./icons.js";
-import {
-  absoluteUrl,
-  escapeHtml,
-  jsonScript,
-  mailto,
-  resolveSiteUrl,
-  safeUrl,
-  tel,
-} from "./html.js";
-
-function imageOf(data, key) {
-  return data.images[key];
-}
-
-function token(value, placeholder) {
-  const text = escapeHtml(value);
-  return placeholder ? `<span class="token">${text}</span>` : text;
-}
+import { absoluteUrl, escapeHtml, jsonScript, mailto, resolveSiteUrl, safeUrl, tel } from "./html.js";
 
 function ticks() {
   return `<span class="tick tick--tl" aria-hidden="true"></span><span class="tick tick--tr" aria-hidden="true"></span><span class="tick tick--bl" aria-hidden="true"></span><span class="tick tick--br" aria-hidden="true"></span>`;
 }
 
-function frameImage(image, { eager = false, caption = "" } = {}) {
+function frameImage(image, { eager = false, caption = "", wide = false } = {}) {
+  if (!image) return "";
   const loading = eager ? "eager" : "lazy";
   const priority = eager ? ' fetchpriority="high"' : "";
-  const captionHtml = caption
-    ? `<figcaption>${escapeHtml(caption)}</figcaption>`
-    : "";
-  return `<div class="frame">${ticks()}<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="${loading}" decoding="async"${priority} />${captionHtml}</div>`;
+  const captionHtml = caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : "";
+  const klass = wide ? "frame frame--wide" : "frame";
+  return `<figure class="${klass}">${ticks()}<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" width="${image.width}" height="${image.height}" loading="${loading}" decoding="async"${priority} />${captionHtml}</figure>`;
 }
 
-function actionLink({ href, label, className, download, iconName }) {
-  const url = safeUrl(href);
-  if (!url) return "";
-  const downloadAttr = download ? ` download="${escapeHtml(download)}"` : "";
-  const glyph = iconName ? icon(iconName) : "";
-  return `<a class="${className}" href="${escapeHtml(url)}"${downloadAttr}>${escapeHtml(label)}${glyph}</a>`;
-}
-
-function socialItems(data) {
-  return (data.socialLinks || [])
-    .map((item) => {
-      const url = safeUrl(item.url);
-      if (!url) {
-        return `<li><span class="social social--pending"><span class="social__label">${escapeHtml(item.label)}</span><span class="social__state">Lien à ajouter</span></span></li>`;
-      }
-      const external = url.startsWith("http")
-        ? ' target="_blank" rel="noopener noreferrer"'
-        : "";
-      return `<li><a class="social" href="${escapeHtml(url)}"${external}><span class="social__label">${escapeHtml(item.label)}</span></a></li>`;
+function langSwitch(data, cluster) {
+  const routes = cluster === "cv" ? data.routes.cv : data.routes.home;
+  const links = ["fr", "en", "es"]
+    .map((code) => {
+      const current = code === data.locale ? ' aria-current="page"' : "";
+      return `<a href="${escapeHtml(routes[code])}" hreflang="${code}" lang="${code}"${current}>${code.toUpperCase()}</a>`;
     })
     .join("");
+  return `<nav class="lang" aria-label="${escapeHtml(data.ui.langLabel)}">${links}</nav>`;
 }
 
-function renderHead(data, { path }) {
+function themeButton(data) {
+  return `<button class="theme-toggle" type="button" aria-label="${escapeHtml(data.ui.themeToDark)}" data-to-dark="${escapeHtml(data.ui.themeToDark)}" data-to-light="${escapeHtml(data.ui.themeToLight)}"><span class="theme-toggle__sun">${icon("sun")}</span><span class="theme-toggle__moon">${icon("moon")}</span></button>`;
+}
+
+function renderHead(data) {
   const siteUrl = resolveSiteUrl(data.site);
-  const canonical = absoluteUrl(siteUrl, path);
+  const path = data.routes.home[data.locale];
+  const canonical = absoluteUrl(siteUrl, path === "/" ? "/" : path);
   const image = absoluteUrl(siteUrl, data.images.og.src);
+  const alternates = ["fr", "en", "es"]
+    .map((code) => {
+      const href = absoluteUrl(siteUrl, data.routes.home[code] === "/" ? "/" : data.routes.home[code]);
+      if (!href) return "";
+      return `<link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}" />`;
+    })
+    .filter(Boolean)
+    .join("");
+  const xDefault = absoluteUrl(siteUrl, "/");
   const person = {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -67,29 +51,26 @@ function renderHead(data, { path }) {
     givenName: data.profile.firstName,
     familyName: data.profile.lastName,
     jobTitle: data.profile.title,
-    description: data.profile.positioning,
+    description: data.profile.heroLead,
     email: `mailto:${data.contact.email}`,
-    telephone: data.contact.phoneHref,
-    knowsAbout: [
-      "Réseaux informatiques",
-      "Télécommunications",
-      "Développement Full-Stack",
-      "Infrastructure informatique",
-      "Entrepreneuriat digital",
-    ],
+    telephone: data.contact.phones.find((phone) => phone.public)?.href,
+    nationality: data.profile.nationality,
+    address: { "@type": "PostalAddress", addressLocality: data.contact.city, addressCountry: "CD" },
+    knowsAbout: data.expertise.map((item) => item.title),
+    knowsLanguage: data.languages.map((item) => item.name),
   };
   if (canonical) person.url = canonical;
-  const sameAs = (data.socialLinks || []).map((item) => safeUrl(item.url)).filter((url) => url.startsWith("http"));
-  if (sameAs.length) person.sameAs = sameAs;
 
   return `
     <title>${escapeHtml(data.site.title)}</title>
     <meta name="description" content="${escapeHtml(data.site.description)}" />
     <meta name="author" content="${escapeHtml(data.profile.name)}" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="${escapeHtml(data.site.themeColor)}" />
     <meta property="og:type" content="profile" />
-    <meta property="og:locale" content="${escapeHtml(data.site.locale)}" />
+    <meta property="og:locale" content="${escapeHtml(data.ogLocale)}" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="es_ES" />
     <meta property="og:title" content="${escapeHtml(data.site.title)}" />
     <meta property="og:description" content="${escapeHtml(data.site.description)}" />
     <meta property="og:image:alt" content="${escapeHtml(data.images.og.alt)}" />
@@ -97,8 +78,9 @@ function renderHead(data, { path }) {
     <meta property="profile:last_name" content="${escapeHtml(data.profile.lastName)}" />
     ${canonical ? `<link rel="canonical" href="${escapeHtml(canonical)}" />` : ""}
     ${canonical ? `<meta property="og:url" content="${escapeHtml(canonical)}" />` : ""}
-    ${image ? `<meta property="og:image" content="${escapeHtml(image)}" />` : `<meta property="og:image" content="${escapeHtml(data.images.og.src)}" />`}
-    ${image ? `<meta property="og:image:width" content="${data.images.og.width}" /><meta property="og:image:height" content="${data.images.og.height}" />` : ""}
+    ${alternates}
+    ${xDefault ? `<link rel="alternate" hreflang="x-default" href="${escapeHtml(xDefault)}" />` : ""}
+    ${image ? `<meta property="og:image" content="${escapeHtml(image)}" /><meta property="og:image:width" content="${data.images.og.width}" /><meta property="og:image:height" content="${data.images.og.height}" />` : `<meta property="og:image" content="${escapeHtml(data.images.og.src)}" />`}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(data.site.title)}" />
     <meta name="twitter:description" content="${escapeHtml(data.site.description)}" />
@@ -109,116 +91,83 @@ function renderHead(data, { path }) {
 
 function renderHeader(data) {
   const links = data.navigation
-    .map(
-      (item) =>
-        `<li><a class="nav-link" href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`,
-    )
+    .map((item) => `<li><a class="nav-link" href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`)
     .join("");
-
+  const pdf = data.cvFiles[data.locale];
   return `
-    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <a class="skip-link" href="#contenu">${escapeHtml(data.ui.skip)}</a>
     <header class="site-header">
       <div class="container site-header__bar">
         <a class="logo" href="#accueil">
           <span class="logo__mark" aria-hidden="true">${escapeHtml(data.profile.initials)}</span>
           <span class="logo__text">
             <span class="logo__name">${escapeHtml(data.profile.name)}</span>
-            <span class="logo__role">Réseaux · Full-Stack · Digital</span>
+            <span class="logo__role">${escapeHtml(data.ui.logoRole)}</span>
           </span>
         </a>
-        <nav id="navigation" class="nav-panel" aria-label="Navigation principale">
+        <div class="header__tools">
+          ${langSwitch(data, "home")}
+          ${themeButton(data)}
+          <a class="btn btn--primary header__cta" href="${escapeHtml(pdf.pdf)}" download="${escapeHtml(pdf.pdfFilename)}">${escapeHtml(data.ui.downloadCv)}</a>
+          <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="navigation" data-open="${escapeHtml(data.ui.menuOpen)}" data-close="${escapeHtml(data.ui.menuClose)}">
+            <span class="sr-only">${escapeHtml(data.ui.menuOpen)}</span>
+            <span class="icon-open">${icon("menu")}</span>
+            <span class="icon-close">${icon("close")}</span>
+          </button>
+        </div>
+        <nav id="navigation" class="nav-panel" aria-label="${escapeHtml(data.ui.navLabel)}">
           <ul class="nav-list">${links}</ul>
+          <a class="btn btn--primary nav-panel__cta" href="${escapeHtml(pdf.pdf)}" download="${escapeHtml(pdf.pdfFilename)}">${icon("download")}${escapeHtml(data.ui.downloadCv)}</a>
         </nav>
-        <a class="btn btn--primary header__cta" href="#contact">Me contacter</a>
-        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="navigation">
-          <span class="sr-only">Ouvrir le menu</span>
-          <span class="icon-open">${icon("menu")}</span>
-          <span class="icon-close">${icon("close")}</span>
-        </button>
       </div>
     </header>
   `;
 }
 
 function renderHero(data) {
-  const roles = data.profile.roles.map((role) => `<span>${escapeHtml(role)}</span>`).join("");
-  const highlights = data.highlights
+  const indicators = data.indicators
     .map(
       (item) =>
-        `<li><span class="highlights__kicker">${escapeHtml(item.kicker)}</span><span class="highlights__label">${escapeHtml(item.label)}</span></li>`,
+        `<li><strong>${escapeHtml(item.strong)}</strong>${item.text ? `<span>${escapeHtml(item.text)}</span>` : ""}</li>`,
     )
     .join("");
-
+  const pdf = data.cvFiles[data.locale];
   return `
-    <section id="accueil" class="hero" aria-labelledby="hero-title">
+    <section class="hero" id="accueil" aria-labelledby="hero-title">
       <div class="container hero__grid">
-        <div class="hero__copy">
-          <p class="badge">${escapeHtml(data.profile.badge)}</p>
-          <h1 id="hero-title">
-            <span class="hero__name">${escapeHtml(data.profile.name)}</span>
-            <span class="hero__roles">${roles}</span>
-          </h1>
+        <div data-reveal>
+          <p class="eyebrow">${escapeHtml(data.profile.roles.join(" · "))}</p>
+          <h1 id="hero-title" class="hero__name">${escapeHtml(data.profile.name)}</h1>
           <p class="hero__lead">${escapeHtml(data.profile.heroLead)}</p>
-          <p class="hero__secondary">${escapeHtml(data.profile.heroSecondary)}</p>
-          <p class="hero__text">${escapeHtml(data.profile.heroDescription)}</p>
+          <ul class="indicators">${indicators}</ul>
           <div class="hero__actions">
-            <a class="btn btn--primary" href="#a-propos">${escapeHtml(data.heroActions.profile)}${icon("arrow")}</a>
-            ${actionLink({
-              href: data.cv.pdfPath,
-              label: data.heroActions.cv,
-              className: "btn btn--secondary",
-              download: data.cv.pdfFilename,
-              iconName: "download",
-            })}
-            <a class="btn btn--ghost" href="#contact">${escapeHtml(data.heroActions.contact)}</a>
+            <a class="btn btn--primary" href="${escapeHtml(pdf.pdf)}" download="${escapeHtml(pdf.pdfFilename)}">${icon("download")}${escapeHtml(data.ui.downloadCv)}</a>
+            <a class="btn btn--secondary" href="#experience">${escapeHtml(data.ui.seeCareer)}</a>
+            <a class="btn btn--secondary" href="#contact">${escapeHtml(data.ui.contactMe)}</a>
           </div>
         </div>
-        <figure class="hero__visual">
-          ${frameImage(imageOf(data, "telecom"), {
-            eager: true,
-            caption: "Visuel temporaire — Télécommunications",
-          })}
-        </figure>
-      </div>
-      <div class="container">
-        <ul class="highlights" aria-label="Repères professionnels">${highlights}</ul>
+        ${frameImage(data.images.profile, { eager: true, caption: data.ui.photoCaption })}
       </div>
     </section>
   `;
 }
 
 function renderAbout(data) {
-  const paragraphs = [
-    `<p class="lead">${escapeHtml(data.profile.positioning)}</p>`,
-    ...data.profile.about.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`),
-  ].join("");
-  const steps = data.profile.approach
-    .map(
-      (step, index) =>
-        `<li><span class="approach__index">${String(index + 1).padStart(2, "0")}</span><span class="approach__label">${escapeHtml(step)}</span></li>`,
-    )
-    .join("");
-
+  const interests = data.profile.interests.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   return `
-    <section id="a-propos" class="section section--white" aria-labelledby="about-title" data-reveal>
-      <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">01 — Profil</p>
-          <h2 id="about-title">${escapeHtml(data.profile.aboutTitle)}</h2>
-        </header>
-        <div class="about__grid">
-          <div class="prose">${paragraphs}</div>
-          <figure class="portrait">
-            <div class="frame frame--portrait">
-              ${ticks()}
-              <img src="${escapeHtml(data.images.profile.src)}" alt="${escapeHtml(data.images.profile.alt)}" width="1000" height="1250" loading="lazy" decoding="async" />
-            </div>
-            <figcaption>Portrait temporaire, à remplacer</figcaption>
-          </figure>
+    <section class="section" id="a-propos" aria-labelledby="about-title">
+      <div class="container about">
+        <div data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.aboutKicker)}</p>
+          <h2 id="about-title">${escapeHtml(data.ui.aboutTitle)}</h2>
+          <blockquote class="quote">${escapeHtml(data.profile.quote)}</blockquote>
+          <p>${escapeHtml(data.profile.educationNote)}</p>
+          <p class="meta-line">${escapeHtml(data.contact.city)} · ${escapeHtml(data.ui.nationalityLabel)}</p>
         </div>
-        <div class="approach-block">
-          <h3>${escapeHtml(data.profile.approachTitle)}</h3>
-          <ol class="approach">${steps}</ol>
+        <div data-reveal>
+          <h3>${escapeHtml(data.ui.interestsTitle)}</h3>
+          <ul class="interest-list">${interests}</ul>
+          ${frameImage(data.images.telecom, { wide: true })}
         </div>
       </div>
     </section>
@@ -228,120 +177,65 @@ function renderAbout(data) {
 function renderExpertise(data) {
   const cards = data.expertise
     .map((item) => {
-      const chips = item.skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("");
-      const media = item.image
-        ? `<div class="card__media">${frameImage(imageOf(data, item.image))}</div>`
-        : `<div class="card__media card__media--type"><span>${escapeHtml(item.index)}</span></div>`;
+      const points = item.points.map((point) => `<li>${escapeHtml(point)}</li>`).join("");
+      const note = item.note ? `<p class="card__note">${escapeHtml(item.note)}</p>` : "";
       return `
-        <article class="card">
-          ${media}
-          <div class="card__body">
-            <p class="card__index">${escapeHtml(item.index)}</p>
-            <h3>${escapeHtml(item.title)}</h3>
-            <p>${escapeHtml(item.description)}</p>
-            <ul class="chips">${chips}</ul>
-          </div>
+        <article class="card" data-reveal>
+          ${item.image ? frameImage(item.image, { wide: true }) : ""}
+          <p class="card__index">${icon(item.icon)}<span>${escapeHtml(item.index)}</span></p>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.text)}</p>
+          <ul class="chips">${points}</ul>
+          ${note}
         </article>
       `;
     })
     .join("");
-
   return `
-    <section id="expertise" class="section" aria-labelledby="expertise-title" data-reveal>
+    <section class="section section--tint" id="expertise" aria-labelledby="expertise-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">02 — Domaines</p>
-          <h2 id="expertise-title">Domaines d'expertise</h2>
-          <p>${escapeHtml(data.expertiseIntro)}</p>
-        </header>
-        <div class="card-grid">${cards}</div>
-      </div>
-    </section>
-  `;
-}
-
-function renderLevel(level) {
-  if (!level || !level.rank) {
-    return `<span class="level"><span class="level__label">${escapeHtml(level?.label || "À préciser")}</span></span>`;
-  }
-  const dots = [1, 2, 3, 4, 5]
-    .map((step) => `<i class="${step <= level.rank ? "is-on" : ""}"></i>`)
-    .join("");
-  return `<span class="level"><span class="level__meter" aria-hidden="true">${dots}</span><span class="level__label">${escapeHtml(level.label)}</span></span>`;
-}
-
-function renderSkills(data) {
-  const groups = data.skillGroups
-    .map((group) => {
-      const items = group.skills
-        .map((skill) => {
-          const level = levelMeta(data.skillLevels, skill.level);
-          return `
-            <li class="skill">
-              <span class="skill__icon">${icon(skill.icon)}</span>
-              <span class="skill__name">${escapeHtml(skill.name)}</span>
-              <span class="skill__meta"><span>${escapeHtml(group.label)}</span>${renderLevel(level)}</span>
-            </li>
-          `;
-        })
-        .join("");
-      return `
-        <section class="skill-group" aria-labelledby="group-${escapeHtml(group.id)}">
-          <h3 id="group-${escapeHtml(group.id)}">${escapeHtml(group.label)}</h3>
-          <ul class="skill-list">${items}</ul>
-        </section>
-      `;
-    })
-    .join("");
-
-  return `
-    <section id="competences" class="section section--white" aria-labelledby="skills-title" data-reveal>
-      <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">03 — Savoir-faire</p>
-          <h2 id="skills-title">Expertise technique</h2>
-          <p>${escapeHtml(data.skillsIntro)}</p>
-          <p class="note">${escapeHtml(data.skillsScale)}</p>
-        </header>
-        <div class="skill-grid">${groups}</div>
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.expertiseKicker)}</p>
+          <h2 id="expertise-title">${escapeHtml(data.ui.expertiseTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.expertiseIntro)}</p>
+        </div>
+        <div class="cards">${cards}</div>
       </div>
     </section>
   `;
 }
 
 function renderExperience(data) {
-  const items = data.experience
-    .map((item) => {
-      const pending = Boolean(item.placeholder);
-      const duties = (item.responsibilities || [])
-        .map((duty) => `<li>${token(duty, pending)}</li>`)
-        .join("");
-      const tech = (item.technologies || [])
-        .map((name) => `<li>${token(name, pending)}</li>`)
-        .join("");
+  const jobs = data.experience
+    .map((job) => {
+      const duties = job.duties.map((duty) => `<li>${escapeHtml(duty)}</li>`).join("");
+      const used = job.used.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+      const place = [job.company, job.location].filter(Boolean).join(" · ");
       return `
-        <article class="entry${pending ? " is-placeholder" : ""}" ${pending ? 'aria-label="Expérience professionnelle à compléter"' : ""}>
-          ${pending ? '<p class="entry__badge">À compléter</p>' : ""}
-          <p class="entry__period">${token(item.period, pending)}</p>
-          <h3>${token(item.role, pending)}</h3>
-          <p class="entry__org">${token(item.company, pending)} <span aria-hidden="true">·</span> ${token(item.location, pending)}</p>
-          <p>${token(item.description, pending)}</p>
-          ${duties ? `<h4>Responsabilités</h4><ul>${duties}</ul>` : ""}
-          ${tech ? `<h4>Technologies</h4><ul class="chips">${tech}</ul>` : ""}
+        <article class="job" data-reveal>
+          <div class="job__rail" aria-hidden="true"><span class="job__dot"></span></div>
+          <div>
+            <p class="job__period">${escapeHtml(job.period)}</p>
+            <h3>${escapeHtml(job.role)}</h3>
+            <p class="job__place">${escapeHtml(place)}</p>
+            <p>${escapeHtml(job.summary)}</p>
+            <ul>${duties}</ul>
+            <p class="job__used">${escapeHtml(data.ui.skillsUsed)}</p>
+            <ul class="chips">${used}</ul>
+          </div>
         </article>
       `;
     })
     .join("");
-
   return `
-    <section id="experience" class="section" aria-labelledby="experience-title" data-reveal>
+    <section class="section" id="experience" aria-labelledby="experience-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">04 — Parcours</p>
-          <h2 id="experience-title">Expérience professionnelle</h2>
-          <p>${escapeHtml(data.experienceIntro)}</p>
-        </header>
-        <div class="timeline">${items}</div>
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.experienceKicker)}</p>
+          <h2 id="experience-title">${escapeHtml(data.ui.experienceTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.experienceIntro)}</p>
+        </div>
+        <div class="timeline">${jobs}</div>
       </div>
     </section>
   `;
@@ -350,28 +244,29 @@ function renderExperience(data) {
 function renderEducation(data) {
   const items = data.education
     .map((item) => {
-      const pending = Boolean(item.placeholder);
+      const where = [item.school, item.location].filter(Boolean).join(" · ");
+      const badge = item.featured ? `<p class="flag">${escapeHtml(data.ui.educationFeatured)}</p>` : "";
+      const detail = item.detail ? `<p>${escapeHtml(item.detail)}</p>` : "";
       return `
-        <article class="entry${pending ? " is-placeholder" : ""}" ${pending ? 'aria-label="Formation à compléter"' : ""}>
-          ${pending ? '<p class="entry__badge">À compléter</p>' : ""}
-          <p class="entry__period">${token(item.year, pending)}</p>
-          <h3>${token(item.degree, pending)}</h3>
-          <p class="entry__org">${token(item.school, pending)}</p>
-          <p>${token(item.specialty, pending)}</p>
+        <article class="study${item.featured ? " study--main" : ""}" data-reveal>
+          ${badge}
+          <h3>${escapeHtml(item.program)}</h3>
+          <p class="job__place">${escapeHtml(where)}</p>
+          <p class="job__period">${escapeHtml(item.period)}</p>
+          ${detail}
         </article>
       `;
     })
     .join("");
-
   return `
-    <section id="formation" class="section section--white" aria-labelledby="education-title" data-reveal>
+    <section class="section section--tint" id="formation" aria-labelledby="education-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">05 — Académique</p>
-          <h2 id="education-title">Formation &amp; parcours académique</h2>
-          <p>${escapeHtml(data.educationIntro)}</p>
-        </header>
-        <div class="timeline">${items}</div>
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.educationKicker)}</p>
+          <h2 id="education-title">${escapeHtml(data.ui.educationTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.educationIntro)}</p>
+        </div>
+        <div class="studies">${items}</div>
       </div>
     </section>
   `;
@@ -380,163 +275,168 @@ function renderEducation(data) {
 function renderCertifications(data) {
   const cards = data.certifications
     .map((item) => {
-      const pending = Boolean(item.placeholder);
-      const url = safeUrl(item.url);
-      const verify = url
-        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Vérifier la certification</a>`
-        : `<span class="token">Lien de vérification à ajouter</span>`;
+      const file = safeUrl(item.file);
+      const issuer = item.issuer || data.ui.issuerUnknown;
+      const date = item.date || data.ui.dateUnknown;
+      const hours = item.hours ? `<p class="cert__hours">${escapeHtml(String(item.hours))} ${escapeHtml(data.ui.hoursUnit)}</p>` : "";
+      const note = item.note ? `<p class="card__note">${escapeHtml(item.note)}</p>` : "";
+      const action = file
+        ? `<button class="btn btn--secondary" type="button" data-cert-open data-cert-src="${escapeHtml(file)}" data-cert-title="${escapeHtml(item.name)}">${escapeHtml(data.ui.viewDocument)}</button>`
+        : `<p class="cert__pending">${escapeHtml(data.ui.documentPending)}</p>`;
+      const plate = file
+        ? ""
+        : `<div class="cert__plate" aria-hidden="true"><span>${escapeHtml(item.domain)}</span></div>`;
       return `
-        <article class="entry${pending ? " is-placeholder" : ""}" ${pending ? 'aria-label="Certification à compléter"' : ""}>
-          ${pending ? '<p class="entry__badge">À compléter</p>' : ""}
-          <p class="entry__period">${token(item.date, pending)}</p>
-          <h3>${token(item.name, pending)}</h3>
-          <p class="entry__org">${token(item.issuer, pending)}</p>
-          <p>Numéro : ${token(item.credentialId, pending)}</p>
-          <p>${verify}</p>
+        <article class="cert" data-reveal>
+          ${plate}
+          <p class="eyebrow">${escapeHtml(item.domain)}</p>
+          <h3>${escapeHtml(item.name)}</h3>
+          <p>${escapeHtml(issuer)}</p>
+          <p class="cert__date">${escapeHtml(date)}</p>
+          ${hours}
+          ${note}
+          ${action}
         </article>
       `;
     })
     .join("");
-
   return `
-    <section id="certifications" class="section" aria-labelledby="certifications-title" data-reveal>
+    <section class="section" id="certifications" aria-labelledby="certs-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">06 — Reconnaissances</p>
-          <h2 id="certifications-title">Certifications &amp; formations professionnelles</h2>
-          <p>${escapeHtml(data.certificationsIntro)}</p>
-        </header>
-        <div class="timeline">${cards}</div>
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.certsKicker)}</p>
+          <h2 id="certs-title">${escapeHtml(data.ui.certsTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.certsIntro)}</p>
+        </div>
+        <div class="certs">${cards}</div>
+      </div>
+      <dialog class="cert-dialog" id="cert-dialog" aria-labelledby="cert-dialog-title">
+        <div class="cert-dialog__bar">
+          <h2 id="cert-dialog-title"></h2>
+          <div class="cert-dialog__actions">
+            <button class="btn btn--secondary" type="button" data-cert-zoom>${escapeHtml(data.ui.zoomDocument)}</button>
+            <button class="btn btn--primary" type="button" data-cert-close>${escapeHtml(data.ui.closeDocument)}</button>
+          </div>
+        </div>
+        <div class="cert-dialog__stage" data-cert-stage></div>
+      </dialog>
+    </section>
+  `;
+}
+
+function renderSkills(data) {
+  const groups = data.skillGroups
+    .map((group) => {
+      const rows = group.skills
+        .map((skill) => {
+          const pips = [1, 2, 3, 4, 5]
+            .map((step) => `<i class="${step <= skill.rank ? "is-on" : ""}"></i>`)
+            .join("");
+          return `
+            <li class="skill">
+              <span class="skill__name">${escapeHtml(skill.name)}</span>
+              <span class="pips" aria-hidden="true">${pips}</span>
+              <span class="skill__level">${escapeHtml(skill.levelLabel)}</span>
+            </li>
+          `;
+        })
+        .join("");
+      return `
+        <section class="skill-group" data-reveal aria-labelledby="skill-${escapeHtml(group.id)}">
+          <h3 id="skill-${escapeHtml(group.id)}">${escapeHtml(group.label)}</h3>
+          <ul>${rows}</ul>
+        </section>
+      `;
+    })
+    .join("");
+  const extra = data.projectTechnologies.map((name) => `<li>${escapeHtml(name)}</li>`).join("");
+  return `
+    <section class="section section--tint" id="competences" aria-labelledby="skills-title">
+      <div class="container">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.skillsKicker)}</p>
+          <h2 id="skills-title">${escapeHtml(data.ui.skillsTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.skillsIntro)}</p>
+        </div>
+        <div class="skill-groups">${groups}</div>
+        <aside class="aside" data-reveal>
+          <h3>${escapeHtml(data.ui.projectTechTitle)}</h3>
+          <ul class="chips">${extra}</ul>
+          <p>${escapeHtml(data.ui.projectTechNote)}</p>
+        </aside>
       </div>
     </section>
   `;
 }
 
 function renderVenture(data) {
-  const cards = data.entrepreneur.cards
-    .map(
-      (card) => `
-        <article class="venture-card">
-          <p class="card__index">${escapeHtml(card.index)}</p>
-          <h3>${escapeHtml(card.title)}</h3>
-          <p>${escapeHtml(card.text)}</p>
-        </article>
-      `,
-    )
+  const points = data.venture.points
+    .map((item, index) => `<li><span>0${index + 1}</span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></li>`)
     .join("");
-
   return `
-    <section id="entrepreneur" class="section section--dark" aria-labelledby="venture-title" data-reveal>
-      <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">07 — Initiative</p>
-          <h2 id="venture-title">${escapeHtml(data.entrepreneur.title)}</h2>
-          <p>${escapeHtml(data.entrepreneur.text)}</p>
-        </header>
-        <div class="venture-grid">${cards}</div>
+    <section class="band" id="entrepreneur" aria-labelledby="venture-title">
+      <div class="container" data-reveal>
+        <p class="eyebrow">${escapeHtml(data.ui.ventureKicker)}</p>
+        <h2 id="venture-title">${escapeHtml(data.venture.title)}</h2>
+        <p class="lede">${escapeHtml(data.venture.text)}</p>
+        <ol class="venture">${points}</ol>
       </div>
     </section>
   `;
 }
 
 function renderCvBand(data) {
+  const blocks = ["fr", "en", "es"]
+    .map((code) => {
+      const file = data.cvFiles[code];
+      const name = data.ui.localeName[code];
+      return `
+        <article class="cv-card" data-reveal>
+          <h3 lang="${code}">${escapeHtml(name)}</h3>
+          <a class="btn btn--secondary" href="${escapeHtml(data.routes.cv[code])}">${escapeHtml(data.ui.cvView)}</a>
+          <a class="btn btn--primary" href="${escapeHtml(file.pdf)}" download="${escapeHtml(file.pdfFilename)}">${escapeHtml(data.ui.downloadPdf)}</a>
+          <a class="btn btn--secondary" href="${escapeHtml(file.docx)}" download="${escapeHtml(file.docxFilename)}">${escapeHtml(data.ui.downloadWord)}</a>
+        </article>
+      `;
+    })
+    .join("");
   return `
-    <section id="cv" class="section section--white" aria-labelledby="cv-title" data-reveal>
-      <div class="container cv-band">
-        <div>
-          <header class="section-head">
-            <p class="eyebrow">08 — Candidature</p>
-            <h2 id="cv-title">${escapeHtml(data.cv.title)}</h2>
-            <p>${escapeHtml(data.cv.intro)}</p>
-          </header>
-          <div class="hero__actions">
-            <a class="btn btn--primary" href="${escapeHtml(safeUrl(data.cv.viewPath))}">${escapeHtml(data.cv.viewLabel)}${icon("arrow")}</a>
-            ${actionLink({
-              href: data.cv.pdfPath,
-              label: data.cv.pdfLabel,
-              className: "btn btn--secondary",
-              download: data.cv.pdfFilename,
-              iconName: "download",
-            })}
-            ${actionLink({
-              href: data.cv.docxPath,
-              label: data.cv.docxLabel,
-              className: "btn btn--secondary",
-              download: data.cv.docxFilename,
-              iconName: "download",
-            })}
-          </div>
+    <section class="section" id="cv" aria-labelledby="cv-title">
+      <div class="container">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.cvKicker)}</p>
+          <h2 id="cv-title">${escapeHtml(data.ui.cvTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.cvIntro)}</p>
         </div>
-        <a class="cv-preview" href="${escapeHtml(safeUrl(data.cv.viewPath))}">
-          <span class="cv-preview__sheet" aria-hidden="true">
-            <span class="cv-preview__name">${escapeHtml(data.profile.name)}</span>
-            <span class="cv-preview__role">${escapeHtml(data.profile.roles[0])}</span>
-            <span class="cv-preview__line"></span>
-            <span class="cv-preview__line"></span>
-            <span class="cv-preview__line cv-preview__line--short"></span>
-          </span>
-          <span class="cv-preview__label">Ouvrir la version consultable</span>
-        </a>
+        <div class="cv-grid">${blocks}</div>
       </div>
     </section>
   `;
 }
 
 function renderContact(data) {
+  const primary = data.contact.phones.find((phone) => phone.public);
   const email = mailto(data.contact.email);
-  const phone = tel(data.contact.phoneHref);
+  const phone = tel(primary.href);
   return `
-    <section id="contact" class="section" aria-labelledby="contact-title" data-reveal>
-      <div class="container contact">
+    <section class="section section--tint" id="contact" aria-labelledby="contact-title">
+      <div class="container contact" data-reveal>
         <div>
-          <header class="section-head">
-            <p class="eyebrow">09 — Contact</p>
-            <h2 id="contact-title">${escapeHtml(data.contactSection.title)}</h2>
-            <p>${escapeHtml(data.contactSection.text)}</p>
-          </header>
-          <div class="hero__actions">
-            <a class="btn btn--primary" href="${escapeHtml(email)}">${icon("mail")}${escapeHtml(data.contactSection.emailButton)}</a>
-            <a class="btn btn--secondary" href="${escapeHtml(phone)}">${icon("phone")}${escapeHtml(data.contactSection.callButton)}</a>
-            ${actionLink({
-              href: data.cv.pdfPath,
-              label: data.contactSection.cvButton,
-              className: "btn btn--secondary",
-              download: data.cv.pdfFilename,
-              iconName: "download",
-            })}
-          </div>
+          <p class="eyebrow">${escapeHtml(data.ui.contactKicker)}</p>
+          <h2 id="contact-title">${escapeHtml(data.ui.contactTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.contactText)}</p>
         </div>
-        <div class="contact__panel">
-          <a class="info-card" href="${escapeHtml(email)}">
-            <span>Email</span>
+        <div class="contact__cards">
+          <a class="contact__card" href="${escapeHtml(email)}">
+            ${icon("mail")}
+            <span>${escapeHtml(data.ui.emailCta)}</span>
             <strong>${escapeHtml(data.contact.email)}</strong>
           </a>
-          <a class="info-card" href="${escapeHtml(phone)}">
-            <span>Téléphone</span>
-            <strong>${escapeHtml(data.contact.phoneDisplay)}</strong>
+          <a class="contact__card" href="${escapeHtml(phone)}">
+            ${icon("phone")}
+            <span>${escapeHtml(data.ui.phonePrimary)}</span>
+            <strong>${escapeHtml(primary.display)}</strong>
           </a>
-          <ul class="social-list" aria-label="Réseaux professionnels">${socialItems(data)}</ul>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-function renderCta(data) {
-  return `
-    <section class="cta" aria-labelledby="cta-title" data-reveal>
-      <div class="container">
-        <h2 id="cta-title">${escapeHtml(data.cta.title)}</h2>
-        <p>${escapeHtml(data.cta.text)}</p>
-        <div class="hero__actions">
-          ${actionLink({
-            href: data.cv.pdfPath,
-            label: data.cta.cvButton,
-            className: "btn btn--primary",
-            download: data.cv.pdfFilename,
-            iconName: "download",
-          })}
-          <a class="btn btn--secondary" href="#contact">${escapeHtml(data.cta.contactButton)}</a>
         </div>
       </div>
     </section>
@@ -545,61 +445,52 @@ function renderCta(data) {
 
 function renderFooter(data) {
   const links = data.navigation
-    .map(
-      (item) =>
-        `<li><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`,
-    )
+    .map((item) => `<li><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`)
     .join("");
-  const email = mailto(data.contact.email);
-  const phone = tel(data.contact.phoneHref);
-
+  const primary = data.contact.phones.find((phone) => phone.public);
+  const year = data.site.copyrightYear;
   return `
     <footer class="site-footer">
-      <div class="container">
-        <div class="footer__grid">
-          <div>
-            <p class="footer__name">${escapeHtml(data.profile.name)}</p>
-            <p class="footer__title">${escapeHtml(data.profile.title)}</p>
-          </div>
-          <div>
-            <p class="footer__label">Contact</p>
-            <ul class="footer__links">
-              <li><a href="${escapeHtml(email)}">${escapeHtml(data.contact.email)}</a></li>
-              <li><a href="${escapeHtml(phone)}">${escapeHtml(data.contact.phoneDisplay)}</a></li>
-            </ul>
-            <ul class="social-list social-list--footer" aria-label="Réseaux professionnels">${socialItems(data)}</ul>
-          </div>
-          <nav aria-label="Navigation du pied de page">
-            <p class="footer__label">Navigation</p>
-            <ul class="footer__links footer__links--grid">${links}</ul>
-          </nav>
+      <div class="container footer__grid">
+        <div>
+          <p class="footer__name">${escapeHtml(data.profile.name)}</p>
+          <p>${escapeHtml(data.profile.title)}</p>
+          <p><a href="${escapeHtml(mailto(data.contact.email))}">${escapeHtml(data.contact.email)}</a></p>
+          <p><a href="${escapeHtml(tel(primary.href))}">${escapeHtml(primary.display)}</a></p>
         </div>
-        <div class="footer__base">
-          <p>© ${escapeHtml(data.site.copyrightYear)} ${escapeHtml(data.profile.name)}. Tous droits réservés.</p>
-          <p>${escapeHtml(data.site.imageCredit)}</p>
+        <nav aria-label="${escapeHtml(data.ui.footerNav)}">
+          <ul class="footer__links">${links}</ul>
+        </nav>
+        <div class="footer__tools">
+          ${langSwitch(data, "home")}
+          ${themeButton(data)}
         </div>
+      </div>
+      <div class="container footer__base">
+        <p>© ${year} ${escapeHtml(data.profile.name)}</p>
+        <p>${escapeHtml(data.site.imageCredit)}</p>
       </div>
     </footer>
   `;
 }
 
-export function renderHome(data = fallback) {
+export function renderHome(data = portfolioFor("fr")) {
   return {
-    head: renderHead(data, { path: "/" }),
+    lang: data.htmlLang,
+    head: renderHead(data),
     body: `
       ${renderHeader(data)}
-      <main id="contenu" tabindex="-1">
+      <main id="contenu">
         ${renderHero(data)}
         ${renderAbout(data)}
         ${renderExpertise(data)}
-        ${renderSkills(data)}
         ${renderExperience(data)}
         ${renderEducation(data)}
         ${renderCertifications(data)}
+        ${renderSkills(data)}
         ${renderVenture(data)}
         ${renderCvBand(data)}
         ${renderContact(data)}
-        ${renderCta(data)}
       </main>
       ${renderFooter(data)}
     `,

@@ -1,12 +1,11 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, unlinkSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildCvModel } from "../src/cv/model.js";
-import { portfolio } from "../src/data/portfolio.js";
+import { portfolioFor, locales } from "../src/data/portfolio.js";
 import { createZip } from "./zip.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const model = buildCvModel(portfolio);
 
 function xml(value) {
   return String(value ?? "")
@@ -75,68 +74,8 @@ function imageParagraph(cx, cy) {
   </w:drawing></w:r></w:p>`;
 }
 
-const photoPath = resolve(root, "public", model.photo.src.replace(/^\//, ""));
-const photo = readFileSync(photoPath);
-const size = jpegSize(photo);
-const displayWidth = 72 * 9525;
-const displayHeight = Math.round(displayWidth * (size.height / size.width));
-
-const blocks = [
-  imageParagraph(displayWidth, displayHeight),
-  paragraph(model.name, "Heading1"),
-  paragraph(model.title),
-  paragraph(`${model.contact.email}  ·  ${model.contact.phoneDisplay}`),
-  paragraph("Profil", "Heading2"),
-  paragraph(model.positioning),
-  ...model.paragraphs.map((text) => paragraph(text)),
-  paragraph("Compétences", "Heading2"),
-  ...model.skillGroups.map((group) =>
-    richParagraph([
-      { text: `${group.label}. `, bold: true },
-      {
-        text: group.skills
-          .map((skill) => (skill.level.rank > 0 ? `${skill.name} (${skill.level.label})` : skill.name))
-          .join(", "),
-      },
-    ]),
-  ),
-  paragraph("Expérience professionnelle", "Heading2"),
-  ...model.experience.flatMap((item) => {
-    const pending = item.placeholder ? ["À compléter"] : [];
-    return [
-      ...pending.map((text) => paragraph(text)),
-      paragraph(`${item.role} — ${item.company}`),
-      paragraph(`${item.location} · ${item.period}`),
-      paragraph(item.description),
-      ...(item.responsibilities || []).map((duty) => paragraph(`• ${duty}`)),
-      paragraph(`Technologies : ${(item.technologies || []).join(", ")}`),
-    ];
-  }),
-  paragraph("Formation", "Heading2"),
-  ...model.education.flatMap((item) => [
-    ...(item.placeholder ? [paragraph("À compléter")] : []),
-    paragraph(item.degree),
-    paragraph(`${item.school} · ${item.specialty} · ${item.year}`),
-  ]),
-  paragraph("Certifications", "Heading2"),
-  ...model.certifications.flatMap((item) => [
-    ...(item.placeholder ? [paragraph("À compléter")] : []),
-    paragraph(item.name),
-    paragraph(`${item.issuer} · ${item.date} · N° ${item.credentialId}`),
-    paragraph(item.url ? `Vérification : ${item.url}` : "Lien de vérification à ajouter"),
-  ]),
-  paragraph("Langues", "Heading2"),
-  ...model.languages.map((item) => paragraph(`${item.name} — ${item.level}`)),
-  paragraph("Signature", "Heading2"),
-  paragraph(
-    model.signature.available
-      ? "Signature manuscrite jointe au portfolio."
-      : "Emplacement réservé à la signature manuscrite.",
-  ),
-  paragraph(model.signature.name),
-];
-
-const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+function documentXml(blocks) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
   <w:body>
     ${blocks.join("")}
@@ -146,14 +85,16 @@ const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     </w:sectPr>
   </w:body>
 </w:document>`;
+}
 
-const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+function stylesXml(lang) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
     <w:rPrDefault><w:rPr>
       <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>
       <w:sz w:val="22"/><w:szCs w:val="22"/>
-      <w:lang w:val="fr-FR"/>
+      <w:lang w:val="${xml(lang)}"/>
     </w:rPr></w:rPrDefault>
     <w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault>
   </w:docDefaults>
@@ -166,9 +107,10 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <w:style w:type="paragraph" w:styleId="Heading2">
     <w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:qFormat/>
     <w:pPr><w:spacing w:before="280" w:after="60"/><w:keepNext/></w:pPr>
-    <w:rPr><w:b/><w:color w:val="0A524E"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
+    <w:rPr><w:b/><w:color w:val="153A66"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
   </w:style>
 </w:styles>`;
+}
 
 const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -194,31 +136,101 @@ const documentRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/profile.jpg"/>
 </Relationships>`;
 
-const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <dc:title>${xml(`CV — ${model.name}`)}</dc:title>
-  <dc:creator>${xml(model.name)}</dc:creator>
-  <dc:description>Curriculum vitae généré depuis les données du portfolio.</dc:description>
-</cp:coreProperties>`;
-
 const app = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
   <Application>Portfolio Édouard Bengehya</Application>
 </Properties>`;
 
-const target = resolve(root, "public/cv/cv-edouard-bengehya.docx");
-mkdirSync(dirname(target), { recursive: true });
-writeFileSync(
-  target,
-  createZip([
-    { name: "[Content_Types].xml", data: contentTypes },
-    { name: "_rels/.rels", data: rels },
-    { name: "docProps/core.xml", data: core },
-    { name: "docProps/app.xml", data: app },
-    { name: "word/document.xml", data: documentXml },
-    { name: "word/styles.xml", data: stylesXml },
-    { name: "word/_rels/document.xml.rels", data: documentRels },
-    { name: "word/media/profile.jpg", data: photo },
-  ]),
-);
-console.log(`DOCX écrit : ${target}`);
+function blocksFor(model, photoSize) {
+  const displayWidth = 72 * 9525;
+  const displayHeight = Math.round(displayWidth * (photoSize.height / photoSize.width));
+  const phones = model.phones.map((phone) => phone.display).join("  ·  ");
+  return [
+    imageParagraph(displayWidth, displayHeight),
+    paragraph(model.name, "Heading1"),
+    paragraph(`${model.ui.civilNameLabel} : ${model.civilName}`),
+    paragraph(model.title),
+    paragraph(`${model.email}  ·  ${phones}`),
+    paragraph(`${model.ui.addressLabel} : ${model.addressLine}`),
+    paragraph(`${model.ui.nationality} : ${model.nationality}  ·  ${model.city}`),
+    paragraph(model.headings.profile, "Heading2"),
+    paragraph(model.quote),
+    paragraph(model.educationNote),
+    paragraph(model.headings.skills, "Heading2"),
+    ...model.skillGroups.map((group) =>
+      richParagraph([
+        { text: `${group.label}. `, bold: true },
+        { text: group.skills.map((skill) => `${skill.name} (${skill.levelLabel})`).join(", ") },
+      ]),
+    ),
+    paragraph(model.headings.experience, "Heading2"),
+    ...model.experience.flatMap((item) => {
+      const place = [item.company, item.location].filter(Boolean).join(" · ");
+      return [
+        paragraph(`${item.role} — ${place}`),
+        paragraph(item.period),
+        paragraph(item.summary),
+        ...item.duties.map((duty) => paragraph(`• ${duty}`)),
+      ];
+    }),
+    paragraph(model.headings.education, "Heading2"),
+    ...model.education.flatMap((item) => {
+      const where = [item.school, item.location].filter(Boolean).join(" · ");
+      return [paragraph(item.program), paragraph(`${where} · ${item.period}`), ...(item.detail ? [paragraph(item.detail)] : [])];
+    }),
+    paragraph(model.headings.certifications, "Heading2"),
+    ...model.certifications.flatMap((item) => {
+      const issuer = item.issuer || model.ui.issuerUnknown;
+      const date = item.date || model.ui.dateUnknown;
+      const hours = item.hours ? ` · ${item.hours} ${model.ui.hoursUnit}` : "";
+      return [
+        paragraph(item.name),
+        paragraph(`${item.domain} · ${issuer} · ${date}${hours}`),
+        ...(item.note ? [paragraph(item.note)] : []),
+      ];
+    }),
+    paragraph(model.headings.languages, "Heading2"),
+    ...model.languages.map((item) => paragraph(`${item.name} — ${item.level}${item.note ? `. ${item.note}` : ""}`)),
+    paragraph(model.headings.interests, "Heading2"),
+    ...model.interests.map((item) => paragraph(`• ${item}`)),
+    paragraph(model.headings.signature, "Heading2"),
+    paragraph(model.signature.available ? model.signature.alt : model.ui.signaturePending),
+    paragraph(model.signature.name),
+  ];
+}
+
+const first = buildCvModel(portfolioFor("fr"));
+const photo = readFileSync(resolve(root, "public", first.photo.src.replace(/^\//, "")));
+const size = jpegSize(photo);
+
+for (const locale of locales) {
+  const data = portfolioFor(locale);
+  const model = buildCvModel(data);
+  const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <dc:title>${xml(data.seo.cvTitle)}</dc:title>
+  <dc:creator>${xml(model.name)}</dc:creator>
+  <dc:description>${xml(data.seo.cvDescription)}</dc:description>
+</cp:coreProperties>`;
+  const target = resolve(root, "public", model.cvFiles[locale].docx.replace(/^\//, ""));
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(
+    target,
+    createZip([
+      { name: "[Content_Types].xml", data: contentTypes },
+      { name: "_rels/.rels", data: rels },
+      { name: "docProps/core.xml", data: core },
+      { name: "docProps/app.xml", data: app },
+      { name: "word/document.xml", data: documentXml(blocksFor(model, size)) },
+      { name: "word/styles.xml", data: stylesXml(model.docLang) },
+      { name: "word/_rels/document.xml.rels", data: documentRels },
+      { name: "word/media/profile.jpg", data: photo },
+    ]),
+  );
+  console.log(`DOCX écrit : ${target}`);
+}
+
+for (const legacyName of ["cv-edouard-bengehya.docx", "cv-edouard-bengehya.pdf"]) {
+  const legacy = resolve(root, "public/cv", legacyName);
+  if (existsSync(legacy)) unlinkSync(legacy);
+}

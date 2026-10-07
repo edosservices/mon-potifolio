@@ -1,77 +1,41 @@
 import { buildCvModel } from "../cv/model.js";
-import { portfolio as fallback } from "../data/portfolio.js";
-import {
-  absoluteUrl,
-  escapeHtml,
-  jsonScript,
-  mailto,
-  resolveSiteUrl,
-  safeUrl,
-  tel,
-} from "./html.js";
+import { portfolioFor } from "../data/portfolio.js";
+import { icon } from "./icons.js";
+import { absoluteUrl, escapeHtml, jsonScript, mailto, resolveSiteUrl, safeUrl, tel } from "./html.js";
 
-function token(value, placeholder) {
-  const text = escapeHtml(value || "");
-  return placeholder ? `<span class="token">${text}</span>` : text;
+function langSwitch(data) {
+  const links = ["fr", "en", "es"]
+    .map((code) => {
+      const current = code === data.locale ? ' aria-current="page"' : "";
+      return `<a href="${escapeHtml(data.routes.cv[code])}" hreflang="${code}" lang="${code}"${current}>${code.toUpperCase()}</a>`;
+    })
+    .join("");
+  return `<nav class="lang" aria-label="${escapeHtml(data.ui.langLabel)}">${links}</nav>`;
 }
 
-function renderHead(data) {
-  const siteUrl = resolveSiteUrl(data.site);
-  const canonical = absoluteUrl(siteUrl, data.cv.viewPath);
-  const title = `CV — ${data.profile.name}`;
-  const description = `Curriculum vitae de ${data.profile.name}, ${data.profile.title}.`;
-  return `
-    <title>${escapeHtml(title)}</title>
-    <meta name="description" content="${escapeHtml(description)}" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="${escapeHtml(data.site.themeColor)}" />
-    ${canonical ? `<link rel="canonical" href="${escapeHtml(canonical)}" />` : ""}
-    <meta property="og:type" content="profile" />
-    <meta property="og:title" content="${escapeHtml(title)}" />
-    <meta property="og:description" content="${escapeHtml(description)}" />
-    <script type="application/ld+json">${jsonScript({
-      "@context": "https://schema.org",
-      "@type": "Person",
-      name: data.profile.name,
-      jobTitle: data.profile.title,
-      email: `mailto:${data.contact.email}`,
-      telephone: data.contact.phoneHref,
-    })}</script>
-  `;
-}
-
-function renderSignature(signature) {
-  const image = signature.available
-    ? `<img src="${escapeHtml(safeUrl(signature.src))}" alt="${escapeHtml(signature.alt)}" />`
-    : `<p class="signature__pending">Emplacement réservé à la signature manuscrite</p>`;
-  return `
-    <figure class="signature">
-      <div class="signature__plate">${image}</div>
-      <figcaption>${escapeHtml(signature.name)}</figcaption>
-    </figure>
-  `;
-}
-
-export function renderCv(data = fallback) {
+export function renderCv(data = portfolioFor("fr")) {
   const model = buildCvModel(data);
-  const email = mailto(model.contact.email);
-  const phone = tel(model.contact.phoneHref);
-  const socials = model.contact.socials
-    .map((item) => {
-      const url = safeUrl(item.url);
-      if (!url) return "";
-      return `<a href="${escapeHtml(url)}">${escapeHtml(item.label)}</a>`;
+  const siteUrl = resolveSiteUrl(data.site);
+  const canonical = absoluteUrl(siteUrl, data.routes.cv[data.locale]);
+  const alternates = ["fr", "en", "es"]
+    .map((code) => {
+      const href = absoluteUrl(siteUrl, data.routes.cv[code]);
+      return href ? `<link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}" />` : "";
     })
     .filter(Boolean)
-    .join('<span aria-hidden="true"> · </span>');
+    .join("");
+  const file = data.cvFiles[data.locale];
+  const phones = model.phones
+    .map((phone, index) => {
+      const label = index === 0 ? model.ui.phonePrimary : model.ui.phoneSecondary;
+      return `<a href="${escapeHtml(tel(phone.href))}"><span class="cv-k">${escapeHtml(label)}</span> ${escapeHtml(phone.display)}</a>`;
+    })
+    .join("");
 
   const skills = model.skillGroups
     .map((group) => {
       const names = group.skills
-        .map((skill) => {
-          const level = skill.level.rank > 0 ? ` (${escapeHtml(skill.level.label)})` : "";
-          return `${escapeHtml(skill.name)}${level}`;
-        })
+        .map((skill) => `${escapeHtml(skill.name)} (${escapeHtml(skill.levelLabel)})`)
         .join(", ");
       return `<p><strong>${escapeHtml(group.label)}.</strong> ${names}</p>`;
     })
@@ -79,19 +43,14 @@ export function renderCv(data = fallback) {
 
   const experience = model.experience
     .map((item) => {
-      const pending = Boolean(item.placeholder);
-      const duties = (item.responsibilities || [])
-        .map((duty) => `<li>${token(duty, pending)}</li>`)
-        .join("");
-      const tech = (item.technologies || []).map((name) => token(name, pending)).join(", ");
+      const place = [item.company, item.location].filter(Boolean).join(" · ");
+      const duties = item.duties.map((duty) => `<li>${escapeHtml(duty)}</li>`).join("");
       return `
         <article class="cv-item">
-          ${pending ? "<p class=\"cv-note\">À compléter</p>" : ""}
-          <h3>${token(item.role, pending)}</h3>
-          <p class="cv-meta">${token(item.company, pending)} · ${token(item.location, pending)} · ${token(item.period, pending)}</p>
-          <p>${token(item.description, pending)}</p>
-          ${duties ? `<ul>${duties}</ul>` : ""}
-          ${tech ? `<p><strong>Technologies :</strong> ${tech}</p>` : ""}
+          <h3>${escapeHtml(item.role)}</h3>
+          <p class="cv-meta">${escapeHtml(place)} · ${escapeHtml(item.period)}</p>
+          <p>${escapeHtml(item.summary)}</p>
+          <ul>${duties}</ul>
         </article>
       `;
     })
@@ -99,12 +58,13 @@ export function renderCv(data = fallback) {
 
   const education = model.education
     .map((item) => {
-      const pending = Boolean(item.placeholder);
+      const where = [item.school, item.location].filter(Boolean).join(" · ");
+      const detail = item.detail ? `<p>${escapeHtml(item.detail)}</p>` : "";
       return `
         <article class="cv-item">
-          ${pending ? "<p class=\"cv-note\">À compléter</p>" : ""}
-          <h3>${token(item.degree, pending)}</h3>
-          <p class="cv-meta">${token(item.school, pending)} · ${token(item.specialty, pending)} · ${token(item.year, pending)}</p>
+          <h3>${escapeHtml(item.program)}</h3>
+          <p class="cv-meta">${escapeHtml(where)} · ${escapeHtml(item.period)}</p>
+          ${detail}
         </article>
       `;
     })
@@ -112,18 +72,15 @@ export function renderCv(data = fallback) {
 
   const certifications = model.certifications
     .map((item) => {
-      const pending = Boolean(item.placeholder);
-      const url = safeUrl(item.url);
-      const verify = url
-        ? ` · <a href="${escapeHtml(url)}">Vérification</a>`
-        : pending
-          ? " · <span class=\"token\">Lien de vérification à ajouter</span>"
-          : "";
+      const issuer = item.issuer || model.ui.issuerUnknown;
+      const date = item.date || model.ui.dateUnknown;
+      const hours = item.hours ? ` · ${item.hours} ${escapeHtml(model.ui.hoursUnit)}` : "";
+      const note = item.note ? `<p>${escapeHtml(item.note)}</p>` : "";
       return `
         <article class="cv-item">
-          ${pending ? "<p class=\"cv-note\">À compléter</p>" : ""}
-          <h3>${token(item.name, pending)}</h3>
-          <p class="cv-meta">${token(item.issuer, pending)} · ${token(item.date, pending)} · N° ${token(item.credentialId, pending)}${verify}</p>
+          <h3>${escapeHtml(item.name)}</h3>
+          <p class="cv-meta">${escapeHtml(item.domain)} · ${escapeHtml(issuer)} · ${escapeHtml(date)}${hours}</p>
+          ${note}
         </article>
       `;
     })
@@ -131,69 +88,113 @@ export function renderCv(data = fallback) {
 
   const languages = model.languages
     .map((item) => {
-      const pending = Boolean(item.placeholder);
-      return `<li>${token(item.name, pending)} — ${token(item.level, pending)}</li>`;
+      const note = item.note ? ` <span class="cv-note">${escapeHtml(item.note)}</span>` : "";
+      return `<li><strong>${escapeHtml(item.name)}</strong> — ${escapeHtml(item.level)}.${note}</li>`;
     })
     .join("");
 
-  return {
-    head: renderHead(data),
-    body: `
-      <a class="skip-link" href="#cv-document">Aller au CV</a>
-      <header class="cv-top">
-        <a class="cv-top__back" href="/">← ${escapeHtml(data.profile.name)}</a>
-        <div class="cv-top__actions">
-          <a class="btn btn--secondary" href="${escapeHtml(safeUrl(data.cv.pdfPath))}" download="${escapeHtml(data.cv.pdfFilename)}">PDF</a>
-          <a class="btn btn--secondary" href="${escapeHtml(safeUrl(data.cv.docxPath))}" download="${escapeHtml(data.cv.docxFilename)}">Word</a>
-        </div>
-      </header>
-      <main id="cv-document" class="cv-sheet" tabindex="-1">
-        <header class="cv-head">
-          <img class="cv-photo" src="${escapeHtml(model.photo.src)}" alt="${escapeHtml(model.photo.alt)}" width="1000" height="1250" />
-          <div>
-            <h1>${escapeHtml(model.name)}</h1>
-            <p class="cv-title">${data.profile.roles.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</p>
-          </div>
-          <p class="cv-contact">
-            <a href="${escapeHtml(email)}">${escapeHtml(model.contact.email)}</a>
-            <a href="${escapeHtml(phone)}">${escapeHtml(model.contact.phoneDisplay)}</a>
-            ${socials}
-          </p>
-        </header>
+  const interests = model.interests.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const signatureImage =
+    model.signature.available && safeUrl(model.signature.src)
+      ? `<img src="${escapeHtml(safeUrl(model.signature.src))}" alt="${escapeHtml(model.signature.alt)}" />`
+      : `<p class="signature__pending">${escapeHtml(model.ui.signaturePending)}</p>`;
 
-        <section aria-labelledby="cv-profil">
-          <h2 id="cv-profil">Profil</h2>
-          <p>${escapeHtml(model.positioning)}</p>
-          ${model.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
-        </section>
-
-        <section aria-labelledby="cv-competences">
-          <h2 id="cv-competences">Compétences</h2>
-          ${skills}
-        </section>
-
-        <section aria-labelledby="cv-experience">
-          <h2 id="cv-experience">Expérience professionnelle</h2>
-          ${experience}
-        </section>
-
-        <section aria-labelledby="cv-formation">
-          <h2 id="cv-formation">Formation</h2>
-          ${education}
-        </section>
-
-        <section aria-labelledby="cv-certifications">
-          <h2 id="cv-certifications">Certifications</h2>
-          ${certifications}
-        </section>
-
-        <section aria-labelledby="cv-langues">
-          <h2 id="cv-langues">Langues</h2>
-          <ul>${languages}</ul>
-        </section>
-
-        ${renderSignature(model.signature)}
-      </main>
-    `,
+  const person = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: model.name,
+    jobTitle: model.title,
+    email: `mailto:${model.email}`,
+    telephone: model.phones[0]?.href,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: model.addressLine,
+      addressLocality: model.city,
+      addressCountry: "CD",
+    },
   };
+  if (canonical) person.url = canonical;
+
+  const head = `
+    <title>${escapeHtml(data.seo.cvTitle)}</title>
+    <meta name="description" content="${escapeHtml(data.seo.cvDescription)}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:locale" content="${escapeHtml(data.ogLocale)}" />
+    <meta property="og:title" content="${escapeHtml(data.seo.cvTitle)}" />
+    <meta property="og:description" content="${escapeHtml(data.seo.cvDescription)}" />
+    ${canonical ? `<link rel="canonical" href="${escapeHtml(canonical)}" />` : ""}
+    ${alternates}
+    <script type="application/ld+json">${jsonScript(person)}</script>
+  `;
+
+  const body = `
+    <a class="skip-link" href="#cv-document">${escapeHtml(model.ui.skip)}</a>
+    <header class="cv-top">
+      <a class="cv-top__back" href="${escapeHtml(data.routes.home[data.locale])}">← ${escapeHtml(model.ui.backHome)}</a>
+      <div class="cv-top__actions">
+        ${langSwitch(data)}
+        <button class="theme-toggle" type="button" aria-label="${escapeHtml(model.ui.themeToDark)}" data-to-dark="${escapeHtml(model.ui.themeToDark)}" data-to-light="${escapeHtml(model.ui.themeToLight)}">
+          <span class="theme-toggle__sun">${icon("sun")}</span>
+          <span class="theme-toggle__moon">${icon("moon")}</span>
+        </button>
+        <a class="btn btn--secondary" href="${escapeHtml(file.pdf)}" download="${escapeHtml(file.pdfFilename)}">${escapeHtml(model.ui.pdf)}</a>
+        <a class="btn btn--secondary" href="${escapeHtml(file.docx)}" download="${escapeHtml(file.docxFilename)}">${escapeHtml(model.ui.word)}</a>
+      </div>
+    </header>
+    <main id="cv-document" class="cv-sheet" lang="${escapeHtml(data.htmlLang)}" tabindex="-1">
+      <header class="cv-head">
+        <img class="cv-photo" src="${escapeHtml(model.photo.src)}" alt="${escapeHtml(model.photo.alt)}" width="${model.photo.width}" height="${model.photo.height}" />
+        <div>
+          <h1>${escapeHtml(model.name)}</h1>
+          <p class="cv-civil">${escapeHtml(model.ui.civilNameLabel)} : ${escapeHtml(model.civilName)}</p>
+          <p class="cv-title">${model.roles.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</p>
+        </div>
+        <p class="cv-contact">
+          <a href="${escapeHtml(mailto(model.email))}">${escapeHtml(model.email)}</a>
+          ${phones}
+          <span><span class="cv-k">${escapeHtml(model.ui.addressLabel)}</span> ${escapeHtml(model.addressLine)}</span>
+          <span><span class="cv-k">${escapeHtml(model.ui.nationality)}</span> ${escapeHtml(model.nationality)}</span>
+        </p>
+      </header>
+      <section aria-labelledby="cv-profil">
+        <h2 id="cv-profil">${escapeHtml(model.headings.profile)}</h2>
+        <p>${escapeHtml(model.quote)}</p>
+        <p>${escapeHtml(model.educationNote)}</p>
+      </section>
+      <section aria-labelledby="cv-competences">
+        <h2 id="cv-competences">${escapeHtml(model.headings.skills)}</h2>
+        ${skills}
+      </section>
+      <section aria-labelledby="cv-experience">
+        <h2 id="cv-experience">${escapeHtml(model.headings.experience)}</h2>
+        ${experience}
+      </section>
+      <section aria-labelledby="cv-formation">
+        <h2 id="cv-formation">${escapeHtml(model.headings.education)}</h2>
+        ${education}
+      </section>
+      <section aria-labelledby="cv-certifications">
+        <h2 id="cv-certifications">${escapeHtml(model.headings.certifications)}</h2>
+        ${certifications}
+      </section>
+      <section aria-labelledby="cv-langues">
+        <h2 id="cv-langues">${escapeHtml(model.headings.languages)}</h2>
+        <ul>${languages}</ul>
+      </section>
+      <section aria-labelledby="cv-interets">
+        <h2 id="cv-interets">${escapeHtml(model.headings.interests)}</h2>
+        <ul>${interests}</ul>
+      </section>
+      <section aria-labelledby="cv-signature">
+        <h2 id="cv-signature">${escapeHtml(model.headings.signature)}</h2>
+        <figure class="signature">
+          <div class="signature__plate">${signatureImage}</div>
+          <figcaption>${escapeHtml(model.signature.name)}</figcaption>
+        </figure>
+      </section>
+    </main>
+  `;
+
+  return { lang: data.htmlLang, head, body };
 }

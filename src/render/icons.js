@@ -53,6 +53,10 @@ const ICONS = {
   ),
   menu: svg(`<path d="M4 7h16M4 12h16M4 17h16"/>`),
   close: svg(`<path d="M6 6l12 12M18 6 6 18"/>`),
+  sun: svg(
+    `<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M4.8 4.8l1.4 1.4M17.8 17.8l1.4 1.4M3.5 12h2M18.5 12h2M4.8 19.2l1.4-1.4M17.8 6.2l1.4-1.4"/>`,
+  ),
+  moon: svg(`<path d="M15.5 3.5a7.2 7.2 0 1 0 5 12.2A8 8 0 1 1 15.5 3.5z"/>`),
 };
 
 export function icon(name) {

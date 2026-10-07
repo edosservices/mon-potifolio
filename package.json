@@ -6,7 +6,7 @@
     "dev": "vite",
     "generate:docx": "node scripts/generate-docx.mjs",
     "generate:pdf": "node scripts/generate-pdf.mjs",
-    "generate:cv": "node scripts/generate-docx.mjs && node scripts/generate-pdf.mjs",
+    "generate:cv": "node scripts/generate-docx.mjs && vite build && node scripts/generate-pdf.mjs",
     "build": "node scripts/generate-docx.mjs && vite build && node scripts/generate-pdf.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
