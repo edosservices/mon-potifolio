@@ -6,13 +6,17 @@ function ticks() {
   return `<span class="tick tick--tl" aria-hidden="true"></span><span class="tick tick--tr" aria-hidden="true"></span><span class="tick tick--bl" aria-hidden="true"></span><span class="tick tick--br" aria-hidden="true"></span>`;
 }
 
-function frameImage(image, { eager = false, caption = "", wide = false } = {}) {
+function frameImage(image, { eager = false, caption = "", wide = false, tall = false } = {}) {
   if (!image) return "";
   const loading = eager ? "eager" : "lazy";
   const priority = eager ? ' fetchpriority="high"' : "";
   const captionHtml = caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : "";
-  const klass = wide ? "frame frame--wide" : "frame";
-  return `<figure class="${klass}">${ticks()}<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" width="${image.width}" height="${image.height}" loading="${loading}" decoding="async"${priority} />${captionHtml}</figure>`;
+  const klass = `frame${wide ? " frame--wide" : ""}${tall ? " frame--tall" : ""}`;
+  const img = `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" width="${image.width}" height="${image.height}" loading="${loading}" decoding="async"${priority} />`;
+  const picture = image.webp
+    ? `<picture><source srcset="${escapeHtml(image.webp)}" type="image/webp" />${img}</picture>`
+    : img;
+  return `<figure class="${klass}">${ticks()}${picture}${captionHtml}</figure>`;
 }
 
 function langSwitch(data, cluster) {
@@ -146,7 +150,7 @@ function renderHero(data) {
             <a class="btn btn--secondary" href="#contact">${escapeHtml(data.ui.contactMe)}</a>
           </div>
         </div>
-        ${frameImage(data.images.profile, { eager: true, caption: data.ui.photoCaption })}
+        ${frameImage(data.images.profile, { eager: true })}
       </div>
     </section>
   `;
@@ -165,9 +169,12 @@ function renderAbout(data) {
           <p class="meta-line">${escapeHtml(data.contact.city)} · ${escapeHtml(data.ui.nationalityLabel)}</p>
         </div>
         <div data-reveal>
+          <div class="portraits">
+            ${frameImage(data.images.profileSmile)}
+            ${frameImage(data.images.profileOutdoor)}
+          </div>
           <h3>${escapeHtml(data.ui.interestsTitle)}</h3>
           <ul class="interest-list">${interests}</ul>
-          ${frameImage(data.images.telecom, { wide: true })}
         </div>
       </div>
     </section>
@@ -181,7 +188,7 @@ function renderExpertise(data) {
       const note = item.note ? `<p class="card__note">${escapeHtml(item.note)}</p>` : "";
       return `
         <article class="card" data-reveal>
-          ${item.image ? frameImage(item.image, { wide: true }) : ""}
+          ${item.image ? frameImage(item.image, { wide: item.image.frame === "wide", tall: item.image.frame === "tall" }) : ""}
           <p class="card__index">${icon(item.icon)}<span>${escapeHtml(item.index)}</span></p>
           <h3>${escapeHtml(item.title)}</h3>
           <p>${escapeHtml(item.text)}</p>
@@ -369,6 +376,30 @@ function renderSkills(data) {
   `;
 }
 
+function renderField(data) {
+  const cards = data.field.items
+    .map(
+      (item) => `
+        <div class="field-card" data-reveal>
+          ${frameImage(item, { tall: true, caption: item.caption })}
+        </div>
+      `,
+    )
+    .join("");
+  return `
+    <section class="section" id="terrain" aria-labelledby="field-title">
+      <div class="container">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">${escapeHtml(data.ui.fieldKicker)}</p>
+          <h2 id="field-title">${escapeHtml(data.ui.fieldTitle)}</h2>
+          <p class="lede">${escapeHtml(data.ui.fieldIntro)}</p>
+        </div>
+        <div class="field">${cards}</div>
+      </div>
+    </section>
+  `;
+}
+
 function renderVenture(data) {
   const points = data.venture.points
     .map((item, index) => `<li><span>0${index + 1}</span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></li>`)
@@ -488,6 +519,7 @@ export function renderHome(data = portfolioFor("fr")) {
         ${renderEducation(data)}
         ${renderCertifications(data)}
         ${renderSkills(data)}
+        ${renderField(data)}
         ${renderVenture(data)}
         ${renderCvBand(data)}
         ${renderContact(data)}

@@ -33,6 +33,7 @@ const navigation = {
     ["#formation", "Formation"],
     ["#certifications", "Certifications"],
     ["#competences", "Compétences"],
+    ["#terrain", "Terrain"],
     ["#cv", "CV"],
     ["#contact", "Contact"],
   ],
@@ -44,6 +45,7 @@ const navigation = {
     ["#formation", "Education"],
     ["#certifications", "Certifications"],
     ["#competences", "Skills"],
+    ["#terrain", "Field"],
     ["#cv", "CV"],
     ["#contact", "Contact"],
   ],
@@ -55,6 +57,7 @@ const navigation = {
     ["#formation", "Formación"],
     ["#certifications", "Certificaciones"],
     ["#competences", "Competencias"],
+    ["#terrain", "Terreno"],
     ["#cv", "CV"],
     ["#contact", "Contacto"],
   ],
@@ -72,7 +75,7 @@ export const dictionaries = {
       title: "Édouard Bengehya — Ingénieur Réseaux & Télécoms | Développeur Full-Stack",
       description:
         "Édouard Bengehya, ingénieur en télécommunications à Kinshasa : administration réseau, sécurité informatique, maintenance, développement web, support IT et systèmes de surveillance.",
-      imageCredit: "Photographies temporaires sous licence Unsplash — à remplacer par vos propres visuels.",
+      imageCredit: "Portraits et photos de terrain : Édouard Bengehya. Le visuel de développement reste une photographie temporaire Unsplash.",
       ogAlt: "Édouard Bengehya, ingénieur réseaux et télécoms, développeur full-stack.",
       cvTitle: "CV français — Édouard Bengehya",
       cvDescription:
@@ -120,6 +123,9 @@ export const dictionaries = {
       dateUnknown: "Date non précisée dans les documents fournis",
       issuerUnknown: "Organisme non précisé dans les documents fournis",
       hoursUnit: "heures",
+      fieldKicker: "Interventions",
+      fieldTitle: "Sur le terrain",
+      fieldIntro: "Réseaux, caméras et installations techniques, sur site.",
       skillsKicker: "Savoir-faire",
       skillsTitle: "Compétences",
       skillsIntro: "Niveaux qualitatifs, modifiables dans les données du site. Aucun pourcentage n’est affiché.",
@@ -180,12 +186,22 @@ export const dictionaries = {
       { strong: "IT Infrastructure & Security", text: "" },
     ],
     images: {
-      profile: "Visuel temporaire du profil d’Édouard Bengehya, à remplacer par une photo personnelle.",
+      profile: "Portrait d’Édouard Bengehya.",
+      profileSmile: "Portrait d’Édouard Bengehya, souriant.",
+      profileOutdoor: "Portrait d’Édouard Bengehya en extérieur.",
+      fieldNetwork: "Édouard Bengehya intervient sur une baie réseau.",
+      fieldCamera: "Installation d’une caméra de surveillance.",
+      fieldSite: "Intervention technique sur site, avec une caméra.",
       network: "Baie de serveurs, visuel temporaire d’infrastructure réseau.",
       telecom: "Pylône de télécommunications, visuel temporaire.",
       development: "Écran de code web, visuel temporaire de développement.",
       technology: "Carte électronique, visuel temporaire de technologie.",
       og: "Édouard Bengehya, ingénieur réseaux et télécoms, développeur full-stack.",
+    },
+    fieldCaptions: {
+      fieldNetwork: "Baie réseau",
+      fieldCamera: "Caméra de surveillance",
+      fieldSite: "Installation sur site",
     },
     expertise: {
       networks: {
@@ -377,7 +393,7 @@ export const dictionaries = {
       title: "Édouard Bengehya — Network & Telecommunications Engineer | Full-Stack Developer",
       description:
         "Édouard Bengehya, telecommunications engineer in Kinshasa: network administration, information security, maintenance, web development, IT support and surveillance systems.",
-      imageCredit: "Temporary photographs under the Unsplash license — replace them with your own visuals.",
+      imageCredit: "Portraits and field photographs: Édouard Bengehya. The development visual remains a temporary Unsplash photograph.",
       ogAlt: "Édouard Bengehya, network and telecommunications engineer, full-stack developer.",
       cvTitle: "CV in English — Édouard Bengehya",
       cvDescription:
@@ -424,6 +440,9 @@ export const dictionaries = {
       dateUnknown: "Date not stated in the documents provided",
       issuerUnknown: "Issuer not stated in the documents provided",
       hoursUnit: "hours",
+      fieldKicker: "On site",
+      fieldTitle: "In the field",
+      fieldIntro: "Networks, cameras and technical installations, on site.",
       skillsKicker: "Capabilities",
       skillsTitle: "Skills",
       skillsIntro: "Qualitative levels, editable in the site data. No percentages are shown.",
@@ -484,12 +503,22 @@ export const dictionaries = {
       { strong: "IT Infrastructure & Security", text: "" },
     ],
     images: {
-      profile: "Temporary profile visual for Édouard Bengehya, to be replaced with a personal photo.",
+      profile: "Portrait of Édouard Bengehya.",
+      profileSmile: "Portrait of Édouard Bengehya, smiling.",
+      profileOutdoor: "Outdoor portrait of Édouard Bengehya.",
+      fieldNetwork: "Édouard Bengehya working on a network rack.",
+      fieldCamera: "Installation of a surveillance camera.",
+      fieldSite: "On-site technical work with a camera.",
       network: "Server racks, temporary network infrastructure visual.",
       telecom: "Telecommunications tower, temporary visual.",
       development: "Web code on a screen, temporary development visual.",
       technology: "Circuit board, temporary technology visual.",
       og: "Édouard Bengehya, network and telecommunications engineer, full-stack developer.",
+    },
+    fieldCaptions: {
+      fieldNetwork: "Network rack",
+      fieldCamera: "Surveillance camera",
+      fieldSite: "On-site installation",
     },
     expertise: {
       networks: {
@@ -681,7 +710,7 @@ export const dictionaries = {
       title: "Édouard Bengehya — Ingeniero de Redes y Telecomunicaciones | Desarrollador Full-Stack",
       description:
         "Édouard Bengehya, ingeniero de telecomunicaciones en Kinshasa: administración de redes, seguridad informática, mantenimiento, desarrollo web, soporte TI y sistemas de vigilancia.",
-      imageCredit: "Fotografías temporales bajo licencia Unsplash — sustitúyalas por sus propios visuales.",
+      imageCredit: "Retratos y fotos de terreno: Édouard Bengehya. El visual de desarrollo sigue siendo una fotografía temporal de Unsplash.",
       ogAlt: "Édouard Bengehya, ingeniero de redes y telecomunicaciones, desarrollador full-stack.",
       cvTitle: "CV en español — Édouard Bengehya",
       cvDescription:
@@ -729,6 +758,9 @@ export const dictionaries = {
       dateUnknown: "Fecha no precisada en los documentos aportados",
       issuerUnknown: "Organismo no precisado en los documentos aportados",
       hoursUnit: "horas",
+      fieldKicker: "Intervenciones",
+      fieldTitle: "En el terreno",
+      fieldIntro: "Redes, cámaras e instalaciones técnicas, en el sitio.",
       skillsKicker: "Saber hacer",
       skillsTitle: "Competencias",
       skillsIntro: "Niveles cualitativos, editables en los datos del sitio. No se muestra ningún porcentaje.",
@@ -789,12 +821,22 @@ export const dictionaries = {
       { strong: "Infraestructura TI y seguridad", text: "" },
     ],
     images: {
-      profile: "Visual temporal del perfil de Édouard Bengehya, a sustituir por una foto personal.",
+      profile: "Retrato de Édouard Bengehya.",
+      profileSmile: "Retrato de Édouard Bengehya, sonriendo.",
+      profileOutdoor: "Retrato de Édouard Bengehya en exterior.",
+      fieldNetwork: "Édouard Bengehya interviene en un rack de red.",
+      fieldCamera: "Instalación de una cámara de vigilancia.",
+      fieldSite: "Intervención técnica en el sitio, con una cámara.",
       network: "Racks de servidores, visual temporal de infraestructura de red.",
       telecom: "Torre de telecomunicaciones, visual temporal.",
       development: "Código web en pantalla, visual temporal de desarrollo.",
       technology: "Placa electrónica, visual temporal de tecnología.",
       og: "Édouard Bengehya, ingeniero de redes y telecomunicaciones, desarrollador full-stack.",
+    },
+    fieldCaptions: {
+      fieldNetwork: "Rack de red",
+      fieldCamera: "Cámara de vigilancia",
+      fieldSite: "Instalación en el sitio",
     },
     expertise: {
       networks: {

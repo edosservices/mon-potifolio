@@ -17,7 +17,9 @@ Le mode clair ou sombre est choisi dans l’en-tête. Il est mémorisé dans `lo
 
 Remplacez les fichiers de `public/images/` en gardant le même nom :
 
-- `profile-placeholder.jpg` — portrait
+- `profile.jpg` — portrait principal (hero et CV)
+- `profile-smile.jpg` et `profile-outdoor.jpg` — portraits de la section profil
+- `field-network.jpg`, `field-camera.jpg`, `field-site.jpg` — photos de terrain
 - `network-placeholder.jpg`
 - `telecom-placeholder.jpg`
 - `development-placeholder.jpg`

@@ -50,6 +50,7 @@ body {
   width: 92px;
   height: 115px;
   object-fit: cover;
+  object-position: center 20%;
   border-radius: 8px;
 }
 

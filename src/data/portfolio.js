@@ -80,7 +80,7 @@ export function portfolioFor(locale = "fr") {
       ...item,
       ...copy.expertise[item.id],
       image: facts.images[item.image]
-        ? { ...facts.images[item.image], alt: copy.images[item.image] }
+        ? { ...facts.images[item.image], alt: copy.images[item.image], frame: item.frame || "wide" }
         : null,
     })),
     skillGroups,
@@ -110,13 +110,15 @@ export function portfolioFor(locale = "fr") {
       alt: copy.signatureAlt,
       name: facts.profile.publicName,
     },
-    images: {
-      profile: { ...facts.images.profile, alt: copy.images.profile },
-      network: { ...facts.images.network, alt: copy.images.network },
-      telecom: { ...facts.images.telecom, alt: copy.images.telecom },
-      development: { ...facts.images.development, alt: copy.images.development },
-      technology: { ...facts.images.technology, alt: copy.images.technology },
-      og: { ...facts.images.og, alt: copy.images.og },
+    images: Object.fromEntries(
+      Object.entries(facts.images).map(([key, image]) => [key, { ...image, alt: copy.images[key] || "" }]),
+    ),
+    field: {
+      items: facts.field.map((id) => ({
+        ...facts.images[id],
+        alt: copy.images[id],
+        caption: copy.fieldCaptions[id],
+      })),
     },
     seo: copy.seo,
     headings: {
